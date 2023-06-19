@@ -1,14 +1,10 @@
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
-import axios from 'axios';
-import SimpleLightbox from "simplelightbox";
-import "simplelightbox/dist/simple-lightbox.min.css";
+import { fetchPhoto } from './js/pixabay-api';
+import { createMarkup } from './js/markup';
+import { refs } from './js/refs';
+import { lightbox } from './js/lightbox';
 
-const ref = {
-    searchForm: document.querySelector('.search-form'),
-    gallery: document.querySelector('.gallery'),
-    btnLoadMore: document.querySelector('.load-more'),
-};
-const { searchForm, gallery, btnLoadMore } = ref;
+const { searchForm, gallery, btnLoadMore } = refs;
 
 const paramsForNotify = {
     position: 'center-center',
@@ -17,8 +13,6 @@ const paramsForNotify = {
     fontSize: '24px'
 };
 
-const URL = "https://pixabay.com/api/";
-const KEY = "37440122-e5d5a2493910548fa520b3add";
 const perPage = 40;
 let page = 1;
 let keyOfSearchPhoto = '';
@@ -29,6 +23,7 @@ searchForm.addEventListener('submit', onSubmitForm);
 
 function onSubmitForm(event) {
     event.preventDefault();
+
     gallery.innerHTML = '';
     page = 1;
     const { searchQuery } = event.currentTarget.elements;
@@ -37,21 +32,31 @@ function onSubmitForm(event) {
         .toLowerCase()
         .split(' ')
         .join('+');
-    console.log(keyOfSearchPhoto);
+    // console.log(keyOfSearchPhoto);
 
-    fetchPhoto(keyOfSearchPhoto, page)
+    if (keyOfSearchPhoto === '') {
+        Notify.info('Enter your request, please!', paramsForNotify);
+        return;
+    }
+
+    fetchPhoto(keyOfSearchPhoto, page, perPage)
         .then(data => {
-            Notify.info(`Hooray! We found ${data.totalHits} images.`, paramsForNotify);
             const searchResults = data.hits;
-            if (searchResults.length === 0) {
+            if (data.totalHits === 0) {
                 Notify.failure('Sorry, there are no images matching your search query. Please try again.', paramsForNotify);
+            } else {
+                Notify.info(`Hooray! We found ${data.totalHits} images.`, paramsForNotify);
+                // console.log(searchResults);
+                createMarkup(searchResults);
+                lightbox.refresh();
+
             };
-            console.log(searchResults);
-            createMarkup(searchResults);    
+            if (data.totalHits > perPage) {
+                btnLoadMore.classList.remove('is-hidden');
+            };
         })
         .catch(onFetchError);
-    
-    btnLoadMore.classList.remove('is-hidden');
+
     btnLoadMore.addEventListener('click', onClickLoadMore);
 
     event.currentTarget.reset();
@@ -59,60 +64,19 @@ function onSubmitForm(event) {
 
 function onClickLoadMore() {
     page += 1;
-    fetchPhoto(keyOfSearchPhoto, page)
+    fetchPhoto(keyOfSearchPhoto, page, perPage)
         .then(data => {
-            const numberOfPage = Math.ceil(data.totalHits / perPage);
             const searchResults = data.hits;
-            console.log(searchResults);
+            const numberOfPage = Math.ceil(data.totalHits / perPage);
+            
             createMarkup(searchResults);
             if (page === numberOfPage) {
                 btnLoadMore.classList.add('is-hidden');
                 Notify.info("We're sorry, but you've reached the end of search results.", paramsForNotify);
             };
+            lightbox.refresh();
         })
         .catch(onFetchError);
-}
-
-function createMarkup(searchResults) {
-    const arrPhotos = searchResults.map(({ webformatURL, largeImageURL, tags, likes, views, comments, downloads }) => {
-        return `<div class="photo-card">
-        <div class="img_wrap">
-            <a class="gallery_link" href="${largeImageURL}">
-                <img src="${webformatURL}" alt="${tags}" width="300" loading="lazy" />
-            </a>
-        </div>
-        <div class="info">
-            <p class="info-item">
-            <b>Likes: ${likes}</b>
-            </p>
-            <p class="info-item">
-            <b>Views: ${views}</b>
-            </p>
-            <p class="info-item">
-            <b>Comments: ${comments}</b>
-            </p>
-            <p class="info-item">
-            <b>Downloads: ${downloads}</b>
-            </p>
-        </div>
-        </div>`
-    });
-    gallery.insertAdjacentHTML("beforeend", arrPhotos.join(''));
-    new SimpleLightbox('.gallery a', { 
-                captionsData: 'alt',
-                captionDelay: 250,
-    });
-};
-
-async function fetchPhoto(q, page) {
-    const url = `${URL}?key=${KEY}&q=${q}&page=${page}&per_page=${perPage}&image_type=photo&orientation=horizontal&safesearch=true`;
-    const response = await axios.get(url);
-    return response.data;
-    // const response = await fetch(`${URL}?key=${KEY}&q=${q}&page=${page}&per_page=${perPage}&image_type=photo&orientation=horizontal&safesearch=true`);
-    // if (!response.ok) {
-    //     throw new Error(response.status);
-    // }
-    // return response.json();             
 };
 
 function onFetchError() {
