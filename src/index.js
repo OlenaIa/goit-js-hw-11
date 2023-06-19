@@ -53,7 +53,9 @@ function onSubmitForm(event) {
             };
             if (data.totalHits > perPage) {
                 btnLoadMore.classList.remove('is-hidden');
+                window.addEventListener('scroll', showLoadMorePage);
             };
+            // scrollPage();
         })
         .catch(onFetchError);
 
@@ -75,6 +77,7 @@ function onClickLoadMore() {
                 Notify.info("We're sorry, but you've reached the end of search results.", paramsForNotify);
             };
             lightbox.refresh();
+            // scrollPage();
         })
         .catch(onFetchError);
 };
@@ -82,3 +85,25 @@ function onClickLoadMore() {
 function onFetchError() {
     Notify.failure('Oops! Something went wrong! Try reloading the page or make another choice!', paramsForNotify);
 };
+
+// function scrollPage() {
+//     const { height: cardHeight } = gallery.firstElementChild.getBoundingClientRect();
+
+//     window.scrollBy({
+//         top: cardHeight * 2,
+//         behavior: "smooth",
+//     });
+// };
+
+function showLoadMorePage() {
+  if (checkIfEndOfPage()) {
+    onClickLoadMore();
+  }
+};
+
+function checkIfEndOfPage() {
+  return (
+    window.innerHeight + window.scrollY >=
+    document.documentElement.scrollHeight
+  );
+}
