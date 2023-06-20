@@ -75,6 +75,8 @@ function onClickLoadMore() {
             if (page === numberOfPage) {
                 btnLoadMore.classList.add('is-hidden');
                 Notify.info("We're sorry, but you've reached the end of search results.", paramsForNotify);
+                btnLoadMore.removeEventListener('click', onClickLoadMore);
+                window.removeEventListener('scroll', showLoadMorePage);
             };
             lightbox.refresh();
             // scrollPage();
@@ -96,14 +98,13 @@ function onFetchError() {
 // };
 
 function showLoadMorePage() {
-  if (checkIfEndOfPage()) {
-    onClickLoadMore();
-  }
+    if (checkIfEndOfPage()) {
+        onClickLoadMore();
+    };
 };
 
 function checkIfEndOfPage() {
   return (
-    window.innerHeight + window.scrollY >=
-    document.documentElement.scrollHeight
+    window.innerHeight + window.scrollY >= document.documentElement.scrollHeight
   );
 }
